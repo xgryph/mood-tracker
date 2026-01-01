@@ -23,20 +23,10 @@ export default function useMoods() {
         setToday(createDefaultMood());
       }
 
-      const keys = await window.storage.list('mood:');
-      if (keys?.keys) {
-        const entries = await Promise.all(
-          keys.keys.slice(0, 90).map(async (key) => {
-            try {
-              const result = await window.storage.get(key);
-              return result?.value ? { date: key.replace('mood:', ''), data: JSON.parse(result.value) } : null;
-            } catch {
-              return null;
-            }
-          })
-        );
-        setHistory(entries.filter(e => e !== null).sort((a, b) => b.date.localeCompare(a.date)));
-      }
+      const allMoods = await window.storage.getAll();
+      const entries = Object.entries(allMoods).map(([date, data]) => ({ date, data }));
+      entries.sort((a, b) => b.date.localeCompare(a.date));
+      setHistory(entries);
     } catch (err) {
       setError(err.message || 'Failed to load mood data');
     } finally {

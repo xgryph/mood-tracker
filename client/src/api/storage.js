@@ -68,6 +68,21 @@ class Storage {
     }
   }
 
+  async getAll() {
+    try {
+      const response = await fetch(`${API_URL}/api/moods`);
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Storage getAll error:', error);
+      return {};
+    }
+  }
+
   async delete(key) {
     try {
       const date = key.replace('mood:', '');

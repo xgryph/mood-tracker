@@ -6,7 +6,8 @@ import {
   eachDayOfInterval,
   format,
   isToday,
-  isFuture
+  isFuture,
+  parseISO
 } from 'date-fns';
 import { dimensions } from '../../config/moodSchema';
 import { getGradientForValue, getAverageForDay } from '../../config/moodUtils';
@@ -23,10 +24,17 @@ export default function MoodHistory({ history, onDayClick }) {
   const calendarGrid = useMemo(() => {
     const today = new Date();
     const endOfCurrentWeek = endOfWeek(today, { weekStartsOn: 0 });
-    const startOf12WeeksAgo = startOfWeek(subWeeks(today, 11), { weekStartsOn: 0 });
+
+    let startDate;
+    if (history.length > 0) {
+      const oldestEntry = history[history.length - 1];
+      startDate = startOfWeek(parseISO(oldestEntry.date), { weekStartsOn: 0 });
+    } else {
+      startDate = startOfWeek(subWeeks(today, 11), { weekStartsOn: 0 });
+    }
 
     const allDays = eachDayOfInterval({
-      start: startOf12WeeksAgo,
+      start: startDate,
       end: endOfCurrentWeek
     });
 
@@ -47,7 +55,7 @@ export default function MoodHistory({ history, onDayClick }) {
     }
 
     return weeks;
-  }, [historyMap]);
+  }, [history, historyMap]);
 
   const handleDayClick = (dayData) => {
     if (!dayData.data) return;
