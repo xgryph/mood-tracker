@@ -4,3 +4,4 @@ dist/
 server/data/db.json
 server/data/backups/
 *.log
+repomix-output*

@@ -2,8 +2,10 @@ import { Router } from 'express';
 import { promises as fs } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { Mutex } from 'async-mutex';
 
 const router = Router();
+const dbMutex = new Mutex();
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DB_PATH = path.join(__dirname, '../data/db.json');
 
@@ -89,11 +91,14 @@ router.post('/', async (req, res, next) => {
       return res.status(400).json({ error: 'Invalid date format. Use YYYY-MM-DD' });
     }
 
-    const db = await readDb();
-    db.moods[date] = data;
-    await writeDb(db);
+    const result = await dbMutex.runExclusive(async () => {
+      const db = await readDb();
+      db.moods[date] = data;
+      await writeDb(db);
+      return { date, data };
+    });
 
-    res.json({ date, data });
+    res.json(result);
   } catch (error) {
     next(error);
   }
@@ -103,16 +108,24 @@ router.post('/', async (req, res, next) => {
 router.delete('/:date', async (req, res, next) => {
   try {
     const { date } = req.params;
-    const db = await readDb();
 
-    if (!db.moods[date]) {
-      return res.status(404).json({ error: 'Mood not found for this date' });
+    const result = await dbMutex.runExclusive(async () => {
+      const db = await readDb();
+
+      if (!db.moods[date]) {
+        return { error: 'Mood not found for this date', status: 404 };
+      }
+
+      delete db.moods[date];
+      await writeDb(db);
+      return { message: 'Mood deleted', date };
+    });
+
+    if (result.error) {
+      return res.status(result.status).json({ error: result.error });
     }
 
-    delete db.moods[date];
-    await writeDb(db);
-
-    res.json({ message: 'Mood deleted', date });
+    res.json(result);
   } catch (error) {
     next(error);
   }
